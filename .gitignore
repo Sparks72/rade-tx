@@ -1,0 +1,4 @@
+build/work/
+verify/out/
+verify/__pycache__/
+node_modules/

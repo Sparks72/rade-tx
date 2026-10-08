@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RADE V1 Transceiver</title>
+<script>
+(function(){ var t = null; try { t = JSON.parse(localStorage.getItem('radetx.theme')); } catch (e) {}
+  if (t !== 'light' && t !== 'dark') t = window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', t); })();
+</script>
 <style>
   :root{
     --bg:#10131a; --panel:#171b24; --panel2:#1d222d; --line:#2a3140;
@@ -61,13 +66,73 @@
   .note{font-size:12.5px;color:var(--dim);margin:8px 0 0;line-height:1.5}
   .note b{color:var(--ink);font-weight:600}
   #catState{font-size:13px}
+
+  /* tuning: a 3D knob, the frequency readout and the step */
+  .tune{display:flex;align-items:center;gap:26px;flex-wrap:wrap}
+  .knobwrap{position:relative;width:132px;height:132px;flex:none}
+  .knobwrap::before{content:"";position:absolute;inset:-8px;border-radius:50%;
+       background:radial-gradient(circle at 50% 50%,#0b0e14 62%,#1a1f2b 63%,#0b0e14 70%);
+       box-shadow:inset 0 2px 6px rgba(0,0,0,.8)}
+  #knob{position:absolute;inset:0;border-radius:50%;cursor:grab;touch-action:none;outline:none;--a:0deg;
+       box-shadow:0 10px 18px rgba(0,0,0,.65),0 2px 3px rgba(0,0,0,.6),inset 0 1px 1px rgba(255,255,255,.18)}
+  #knob:active{cursor:grabbing}
+  #knob:focus-visible{box-shadow:0 0 0 2px var(--key),0 10px 18px rgba(0,0,0,.65)}
+  #knob .knurl,#knob .top{position:absolute;inset:0;border-radius:50%;transform:rotate(var(--a))}
+  #knob .knurl{background:repeating-conic-gradient(from 0deg,#3a4150 0deg 3deg,#262b36 3deg 6deg)}
+  #knob .shade{position:absolute;inset:0;border-radius:50%;pointer-events:none;
+       background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(0,0,0,.35))}
+  #knob .cap{position:absolute;inset:16px;border-radius:50%;
+       background:radial-gradient(circle at 35% 28%,#5c6577 0%,#3b4250 38%,#252a35 75%,#1b1f28 100%);
+       box-shadow:inset 0 2px 3px rgba(255,255,255,.14),inset 0 -4px 8px rgba(0,0,0,.55),0 1px 2px rgba(0,0,0,.7)}
+  #knob .dimple{position:absolute;left:50%;top:30px;width:16px;height:16px;margin-left:-8px;border-radius:50%;
+       background:radial-gradient(circle at 60% 65%,#3f4757 0%,#191d25 70%);
+       box-shadow:inset 0 2px 4px rgba(0,0,0,.85),0 1px 0 rgba(255,255,255,.12)}
+  #knob .mark{position:absolute;left:50%;top:3px;width:3px;height:11px;margin-left:-1.5px;border-radius:2px;background:var(--key)}
+  #knob.off{opacity:.45;cursor:default}
+  .freqbox{display:flex;flex-direction:column;gap:8px}
+  #freq{font:600 34px/1 "Segoe UI",Roboto,system-ui,sans-serif;font-variant-numeric:tabular-nums;letter-spacing:.5px;
+        color:var(--key);background:#0b0e14;border:1px solid var(--line);border-radius:6px;padding:10px 14px;
+        min-width:250px;cursor:text}
+  #freq.off{color:var(--dim)}
+  #freq small{font-size:15px;color:var(--dim);margin-left:6px}
+  #freqIn{font:600 30px/1 "Segoe UI",Roboto,system-ui,sans-serif;width:250px;padding:8px 12px;background:#0b0e14;
+        color:var(--ink);border:1px solid var(--key);border-radius:6px;display:none}
+  .stepbtn{min-width:46px;font-size:18px;padding:6px 10px}
+  .bandbtn{font-size:13px;padding:6px 10px;line-height:1.2;text-align:center}
+  .bandbtn small{display:block;font-size:11px;color:var(--dim)}
+  .bandbtn.cur{border-color:var(--key);box-shadow:inset 0 0 0 1px var(--key)}
   hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+
+  /* ---- theme switch, and the light theme (dark stays the default above) ---- */
+  :root{color-scheme:dark}
+  #themeBtn{float:right;font-size:13px;padding:6px 12px;margin-top:2px}
+  :root[data-theme="light"]{
+    color-scheme:light;
+    --bg:#eef1f5; --panel:#ffffff; --panel2:#f4f6f9; --line:#cfd6e0;
+    --ink:#1b2230; --dim:#5b6577; --key:#0f8a5f; --warn:#9a6200; --hot:#c0392b;
+  }
+  :root[data-theme="light"] select,
+  :root[data-theme="light"] input[type=text]{background:#f8fafc}
+  :root[data-theme="light"] button{background:#e9edf2}
+  :root[data-theme="light"] button:hover:not(:disabled){background:#dde3ea}
+  :root[data-theme="light"] #txBtn{background:#e9edf2;border-color:#9aa5b5;color:#1b2230}
+  :root[data-theme="light"] #txBtn.on{background:#c0392b;border-color:#a93226;color:#ffffff}
+  :root[data-theme="light"] .lamp{background:#c3cad5}
+  :root[data-theme="light"] .lamp.on{background:var(--key)}
+  :root[data-theme="light"] .meter{background:#eef1f5}
+  :root[data-theme="light"] .knobwrap::before{background:radial-gradient(circle at 50% 50%,#c4cbd6 62%,#e3e7ee 63%,#c4cbd6 70%);
+       box-shadow:inset 0 2px 5px rgba(0,0,0,.25)}
+  :root[data-theme="light"] #knob{box-shadow:0 8px 14px rgba(0,0,0,.35),0 2px 3px rgba(0,0,0,.35),inset 0 1px 1px rgba(255,255,255,.18)}
+  :root[data-theme="light"] #freq,
+  :root[data-theme="light"] #freqIn{background:#f8fafc}
+  /* the waterfall keeps its dark background in both themes: weak signals show best on black */
 </style>
 </head>
 <body>
 <div class="wrap">
 
   <header>
+    <button id="themeBtn" type="button"></button>
     <h1>RADE V1 Transceiver</h1>
     <p>FreeDV's radio autoencoder running in the browser: transmit and receive RADE V1 through your rig's USB sound card.</p>
   </header>
@@ -100,7 +165,7 @@
     </div>
     <div class="row">
       <label>Drive <input type="range" id="drive" min="-30" max="0" step="1" value="-6"><span class="val" id="driveVal">−6 dB</span></label>
-      <label>Volume <input type="range" id="vol" min="-30" max="12" step="1" value="0"><span class="val" id="volVal">0 dB</span></label>
+      <label>Volume <input type="range" id="vol" min="-30" max="24" step="1" value="0"><span class="val" id="volVal">0 dB</span></label>
       <label><input type="checkbox" id="bpf" checked> Transmit bandpass filter</label>
       <label><input type="checkbox" id="voiceProc"> Browser voice processing</label>
     </div>
@@ -122,10 +187,73 @@
           <option value="300">5 minutes</option><option value="600">10 minutes</option>
         </select></label>
       <label><input type="checkbox" id="usePtt" checked> Key the rig over CAT</label>
+      <label title="FreeDV's standard: LSB below 10 MHz, USB from 10 MHz up"><input type="checkbox" id="forceUsb" checked> Set the sideband (LSB below 10 MHz, USB above)</label>
       <span id="catState" class="dim">Not connected — use VOX, or connect CAT</span>
     </div>
     <p class="note">115200 baud. The rig is sent to receive whenever an over ends, when the safety limit is reached,
       if the page is closed, or on any error. <b>Esc</b> ends an over and unkeys immediately.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Tuning</h2>
+    <div class="tune">
+      <div class="knobwrap"><div id="knob" class="off" tabindex="0" role="slider" aria-label="Tuning knob"
+           aria-valuetext="not connected"><div class="knurl"></div><div class="shade"></div><div class="cap"></div><div class="top"><div class="dimple"></div><div class="mark"></div></div></div></div>
+      <div class="freqbox">
+        <div id="freq" class="off" title="Click to type a frequency">—<small>MHz</small></div>
+        <input type="text" id="freqIn" inputmode="decimal" spellcheck="false">
+        <div class="row" style="margin:0">
+          <button class="stepbtn" id="tuneDn" disabled>−</button>
+          <button class="stepbtn" id="tuneUp" disabled>+</button>
+          <label>Step <select id="tuneStep">
+            <option value="1">1 Hz</option><option value="5" selected>5 Hz</option>
+            <option value="10">10 Hz</option><option value="100">100 Hz</option>
+            <option value="1000">1 kHz</option><option value="10000">10 kHz</option>
+          </select></label>
+        </div>
+      </div>
+    </div>
+    <p class="note">Drag the knob round, use the mouse wheel over it, or the arrow keys once it is selected
+      (Page Up / Page Down move ten steps). Click the frequency to type one in, in MHz or kHz.
+      The display follows the rig's own knob too. Tuning is locked while transmitting.</p>
+    <hr>
+    <div class="row">
+      <h3>Rig</h3>
+      <label title="The QMX keeps a separate RF gain for each band">RF gain <input type="range" id="rgSl" min="0" max="80" step="1" value="0" disabled><span class="val" id="rgVal">—</span></label>
+      <label title="The QMX's Volume also sets the audio level it sends to the PC">QMX volume <input type="range" id="agSl" min="0" max="200" step="1" value="0" disabled><span class="val" id="agVal">—</span></label>
+    </div>
+    <div class="row">
+      <h3>Listen</h3>
+      <label><input type="checkbox" id="monOn" checked> Hear the rig when no RADE is decoded</label>
+      <label>Boost <input type="range" id="monGain" min="-20" max="24" step="1" value="0"><span class="val" id="monVal">0 dB</span></label>
+    </div>
+    <p class="note" style="margin-top:6px">RF gain is kept by the QMX for each band, so check it after changing band. With
+      <b>Hear the rig</b> on you hear the band itself, noise, SSB and all, whenever the decoder is not giving speech; it goes
+      quiet by itself while RADE is being decoded and while you transmit.</p>
+    <hr>
+    <div class="row" id="bandRow">
+      <h3>Band</h3>
+    </div>
+    <p class="note" style="margin-top:6px">Each button tunes to the usual FreeDV frequency on that band, sets the sideband
+      (LSB below 10 MHz, USB above) and sets the scan range 10 kHz either side. Your QMX only tunes the bands it is built for.</p>
+    <hr>
+    <div class="row">
+      <h3>Scan</h3>
+      <label>From <input type="text" id="scanLo" spellcheck="false"></label>
+      <label>to <input type="text" id="scanHi" spellcheck="false"> MHz</label>
+      <label>Listen <select id="scanDwell"><option value="1000">1 s</option><option value="1500" selected>1.5 s</option>
+        <option value="2500">2.5 s</option><option value="4000">4 s</option></select> per stop</label>
+      <label>Stop on <select id="scanThr"><option value="4">weak signals (4 dB)</option>
+        <option value="6" selected>normal (6 dB)</option><option value="10">strong only (10 dB)</option></select></label>
+    </div>
+    <div class="row">
+      <button id="scanBtn" disabled>Scan</button>
+      <button id="scanGo" disabled>Continue scan</button>
+      <label><input type="checkbox" id="autoCentre" checked> Centre on a RADE lock</label>
+    </div>
+    <p class="note" id="scanState">The scan moves up the range 1 kHz at a time and stops on any wide signal, centred on the dial.
+      You decide whether it is RADE: <b>Continue scan</b> moves on, <b>Stop scan</b> stays. With <b>Centre on a RADE lock</b>,
+      the dial is nudged so the offset reads 0 Hz whenever the decoder is locked. Receive must be on.</p>
   </div>
 
   <div class="panel">
@@ -587,6 +715,9 @@ async function startReceive(){
     rxNode = new AudioWorkletNode(rxCtx, 'rade-capture-f', { numberOfOutputs: 0 });
     const src = rxCtx.createMediaStreamSource(rxStream);
     src.connect(rxNode);
+    rx.mon = rxCtx.createGain(); rx.mon.gain.value = 0;          // "Hear the rig": raw rig audio to the speakers
+    src.connect(rx.mon); rx.mon.connect(rxCtx.destination);
+    setSink(rxCtx, $('spkSel').value);
     rxAnalyser = rxCtx.createAnalyser(); rxAnalyser.fftSize = 512; rxAnalyser.smoothingTimeConstant = 0;
     src.connect(rxAnalyser);
     rxNode.port.onmessage = e => onRigAudio(e.data);
@@ -608,12 +739,17 @@ async function stopReceive(){
   finishRec();
   if (rxStream) rxStream.getTracks().forEach(t => t.stop());
   if (rxCtx) try { await rxCtx.close(); } catch {}
-  rxStream = null; rxCtx = null; rxNode = null; rxAnalyser = null;
+  rxStream = null; rxCtx = null; rxNode = null; rxAnalyser = null; rx.mon = null;
   rx.on = false; rx.sync = 0;
   if (spkNode) spkNode.port.postMessage({ cmd: 'reset' });
   rxTick();
 }
 async function restartReceive(){ await stopReceive(); await startReceive(); }
+/* Starting and stopping the receiver take a moment each; run them one after another,
+   so a click on "Find audio devices" while the page is still starting receive by
+   itself cannot pull the audio context away from the start in progress. */
+let rxQueue = Promise.resolve();
+function rxSerial(fn){ const p = rxQueue.then(fn, fn); rxQueue = p.catch(() => {}); return p; }
 
 function decoderReset(){
   D.R._rr_init();
@@ -622,6 +758,7 @@ function decoderReset(){
 }
 function rxPause(){                      // transmitting: stop decoding, silence the speakers
   rx.paused = true;
+  if (rx.mon) rx.mon.gain.value = 0;
   finishRec();
   if (spkNode) spkNode.port.postMessage({ cmd: 'reset' });
   rx.sync = 0;
@@ -684,7 +821,13 @@ function finishRec(){
   $('rxLastInfo').textContent = `${(c.slen / SPEECH_RATE).toFixed(1)} s of speech at ${c.t0.toLocaleTimeString()}`;
 }
 
+function monitorTick(){
+  if (!rx.mon) return;
+  const want = $('monOn').checked && rx.on && !rx.paused && !tx.on && !rx.sync ? Math.pow(10, +$('monGain').value / 20) : 0;
+  rx.mon.gain.setTargetAtTime(want, rx.mon.context.currentTime, 0.05);            // a short fade, no clicks
+}
 function rxTick(){
+  monitorTick();
   const now = performance.now();
   const lamp = $('lamp'), s = $('sync');
   if (!rx.on){ lamp.className = 'lamp'; s.textContent = D ? ($('rxOn').checked ? 'not receiving' : 'receive off') : 'decoder loading';
@@ -705,6 +848,7 @@ function rxTick(){
     else if (st.className === 'sync'){ st.className = 'rx'; st.textContent = 'Receive'; }
   }
   $('wfTitle').textContent = tx.on ? 'Signal — transmitted' : rx.on ? 'Signal — received from the rig' : 'Signal';
+  if (typeof autoCentre === 'function') autoCentre();
 }
 
 /* ---------- decode a recording ---------------------------------------- */
@@ -850,19 +994,27 @@ async function catConnect(){
     port = await navigator.serial.requestPort();
     await port.open({ baudRate: 115200 });
     writer = port.writable.getWriter();
-    (async () => {                       // read and discard replies, so they never back up
-      try { reader = port.readable.getReader(); while (true){ const { done } = await reader.read(); if (done) break; } }
+    (async () => {                       // read replies, so they never back up; frequency reports update the tuning display
+      const dec = new TextDecoder(); let acc = '';
+      try { reader = port.readable.getReader();
+        while (true){ const { value, done } = await reader.read(); if (done) break;
+          acc += dec.decode(value, { stream: true });
+          let k; while ((k = acc.indexOf(';')) >= 0){ catReply(acc.slice(0, k).trim()); acc = acc.slice(k + 1); }
+          if (acc.length > 256) acc = '';
+        } }
       catch {} finally { try { reader.releaseLock(); } catch {} }
     })();
     $('catBtn').textContent = 'Disconnect CAT';
-    catNote('Connected at 115200 baud', 'ok');
+    catNote('Connected at 115200 baud', 'ok');      // the sideband is set once the rig reports its frequency
     await cat($('unkeyCmd').value);      // start from a known state
+    tuneStart();
   } catch (e){
     port = null; writer = null;
     catNote(e.name === 'NotFoundError' ? 'No port chosen' : 'CAT failed: ' + e.message, 'err');
   }
 }
 async function catDisconnect(){
+  tuneStop();
   try { await cat($('unkeyCmd').value); } catch {}
   try { if (reader) await reader.cancel(); } catch {}
   try { if (writer) writer.releaseLock(); } catch {}
@@ -877,9 +1029,328 @@ async function cat(cmd){
 }
 function catNote(t, cls){ const s = $('catState'); s.textContent = t; s.className = cls || 'dim'; }
 const wantPtt = () => $('usePtt').checked && writer;
-async function keyRig(){ if (wantPtt()){ await cat($('keyCmd').value); await sleep(PTT_LEAD_MS); } }
+/* RADE is many carriers at once: it must go out on SSB, never the QMX's single-tone
+   DIGI mode, and on FreeDV's standard sideband: LSB below 10 MHz, USB from 10 MHz up
+   (the FreeDV user manual, "USB or LSB?"). MD1 = LSB, MD2 = USB. */
+const wantMode = () => (tune.hz !== null && tune.hz < 10e6) ? 1 : 2;
+async function setUsb(){ if (!writer) return; if ($('forceUsb').checked) await cat('MD' + wantMode() + ';'); await sleep(60); await cat('MD;'); }
+async function keyRig(){ if (wantPtt()){ if ($('forceUsb').checked) await cat('MD' + wantMode() + ';'); await cat($('keyCmd').value); await sleep(PTT_LEAD_MS); } }
+/* on LSB the audio runs the other way: a signal higher in the audio is lower on the dial */
+const sbSign = () => ((rigMode === 1 || rigMode === 9) || (rigMode === null && tune.hz !== null && tune.hz < 10e6)) ? -1 : 1;
 async function unkeyRig(){ if (writer){ try { await cat($('unkeyCmd').value); } catch {} } }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- tuning knob ------------------------------------------------- */
+/* Kenwood-style CAT, as the QMX speaks it: "FA;" asks for VFO A, the rig answers
+   "FA00014236000;", and "FA00014236000;" sets it. The knob turns with the pointer
+   angle for angle (one turn = 50 steps), so the mark stays under your finger. */
+const TUNE_PER_TURN = 50, TUNE_MIN = 100000, TUNE_MAX = 60000000;
+const tune = { hz: null, angle: 0, drag: null, sendT: null, sentHz: null, touched: -1e9, poll: null };
+const lvl = { rg: null, ag: null, drag: { rg: false, ag: false }, sendT: { rg: null, ag: null }, last: { rg: 0, ag: 0 } };
+function showLvl(){
+  const on = !!writer && !tx.on;
+  $('rgSl').disabled = !(on && lvl.rg !== null); $('agSl').disabled = !(on && lvl.ag !== null);
+  if (lvl.rg !== null && !lvl.drag.rg){ $('rgSl').max = Math.max(80, lvl.rg); $('rgSl').value = lvl.rg; }
+  if (lvl.ag !== null && !lvl.drag.ag){ $('agSl').max = Math.max(200, lvl.ag); $('agSl').value = lvl.ag; }
+  $('rgVal').textContent = lvl.rg === null ? '—' : lvl.rg + ' dB';
+  $('agVal').textContent = lvl.ag === null ? '—' : (lvl.ag * 0.25).toFixed(2) + ' dB';
+}
+function readLvl(){ if (writer){ cat('RG;'); cat('AG;'); } }
+function sendLvl(which, v){
+  v = Math.max(0, Math.round(v)); lvl[which] = v; showLvl();
+  clearTimeout(lvl.sendT[which]);
+  const go = () => { lvl.last[which] = Date.now(); cat(which === 'ag' ? 'AG0' + String(v).padStart(3, '0') + ';' : 'RG' + String(v).padStart(3, '0') + ';');
+                     setTimeout(() => { if (!lvl.drag[which]) cat(which === 'ag' ? 'AG;' : 'RG;'); }, 300); };   // read back what the rig took
+  const since = Date.now() - lvl.last[which];
+  if (since >= 200) go(); else lvl.sendT[which] = setTimeout(go, 200 - since);                         // at most 5 a second while dragging
+}
+const MODE_NAMES = { 1: 'LSB', 2: 'USB', 3: 'CW', 4: 'FM', 5: 'AM', 6: 'DIGI', 7: 'CW-R', 9: 'DIGI-R' };
+let rigMode = null;
+function catReply(r){
+  const rg = /^RG(\d{1,3})$/.exec(r);
+  if (rg){ if (!lvl.drag.rg) { lvl.rg = +rg[1]; showLvl(); } return; }
+  const ag = /^AG(\d{3,4})$/.exec(r);
+  if (ag){ if (!lvl.drag.ag){ const d = ag[1]; lvl.ag = parseInt(d.length >= 4 ? d.slice(1) : d, 10); showLvl(); } return; }
+  const md = /^MD(\d)$/.exec(r);
+  if (md){
+    rigMode = +md[1];
+    const name = MODE_NAMES[rigMode] || 'mode ' + rigMode;
+    const want = wantMode(), wname = MODE_NAMES[want];
+    if (rigMode === want) catNote(`Connected at 115200 baud \u00b7 rig in ${name}`, 'ok');
+    else catNote(`Connected \u00b7 rig in ${name}, but RADE here needs ${wname} (FreeDV: LSB below 10 MHz, USB above).`
+      + ($('forceUsb').checked ? ' The rig did not accept the change; check its SSB firmware.' : ' Tick \u201cSet the sideband\u201d.'), 'err');
+    return;
+  }
+  const m = /^FA(\d{8,11})$/.exec(r);
+  if (!m) return;
+  const hz = parseInt(m[1], 10);
+  if (tune.drag || performance.now() - tune.touched < 1200) return;   // our own change is still on its way
+  const first = tune.hz === null;
+  if (hz !== tune.hz){ tune.hz = hz; showFreq(); showBand(); }
+  if (first) setUsb();
+  if (!$('scanLo').value || !$('scanHi').value) scanFillRange();
+}
+function tuneStart(){
+  tuneEnable(true); scanButtons();
+  cat('FA;');
+  clearInterval(tune.poll);
+  let n = 0; readLvl();
+  tune.poll = setInterval(() => { if (!tx.on && !tune.drag){ cat('FA;'); if (++n % 3 === 0) readLvl(); } }, 1000);   // follow the rig's own knob and levels
+}
+function lvlOff(){ lvl.rg = lvl.ag = null; showLvl(); }
+function tuneStop(){ lvlOff(); scanStop('CAT disconnected'); setTimeout(scanButtons, 0); clearInterval(tune.poll); tune.poll = null; clearTimeout(tune.sendT); tune.sendT = null; tune.hz = null; tuneEnable(false); showFreq(); }
+function tuneEnable(on){
+  $('knob').classList.toggle('off', !on); $('freq').classList.toggle('off', !on);
+  if (typeof showBand === 'function') showBand();
+  $('tuneUp').disabled = $('tuneDn').disabled = !on;
+}
+const tuneOk = () => writer && tune.hz !== null && !tx.on;
+function fmtFreq(hz){
+  const s = String(hz).padStart(7, '0'), mhz = s.slice(0, -6), khz = s.slice(-6, -3), h = s.slice(-3);
+  return `${mhz}.${khz}.${h}`;
+}
+function showFreq(){
+  const f = $('freq');
+  f.innerHTML = (tune.hz === null ? '—' : fmtFreq(tune.hz)) + '<small>MHz</small>';
+  $('knob').setAttribute('aria-valuetext', tune.hz === null ? 'not connected' : fmtFreq(tune.hz) + ' MHz');
+}
+function drawKnob(){ $('knob').style.setProperty('--a', tune.angle + 'deg'); }   // only the rim, dimple and mark turn; the light stays put
+function stepHz(){ return +$('tuneStep').value; }
+/* move by n steps; the frequency snaps to the step, as a rig's VFO does */
+function tuneBy(n){
+  if (!tuneOk() || !n) return;
+  scanStop('you tuned');
+  const st = stepHz();
+  setFreq(Math.round(tune.hz / st) * st + n * st, n * 360 / TUNE_PER_TURN);
+}
+function setFreq(hz, turnDeg){
+  if (!tuneOk()) return;
+  hz = Math.max(TUNE_MIN, Math.min(TUNE_MAX, Math.round(hz)));
+  tune.angle = (tune.angle + (turnDeg || 0)) % 3600; drawKnob();
+  if (hz === tune.hz) return;
+  const crossed = tune.hz !== null && (tune.hz < 10e6) !== (hz < 10e6);
+  tune.hz = hz; tune.touched = performance.now(); showFreq(); showBand();
+  if (crossed) setTimeout(setUsb, 80);
+  if (!tune.sendT) tune.sendT = setTimeout(sendFreq, 40);            // at most 25 commands a second
+}
+function sendFreq(){
+  tune.sendT = null;
+  if (!writer || tune.hz === tune.sentHz) return;
+  tune.sentHz = tune.hz;
+  cat('FA' + String(tune.hz).padStart(11, '0') + ';');
+}
+(() => {
+  const k = $('knob');
+  const ang = e => { const r = k.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180 / Math.PI; };
+  k.addEventListener('pointerdown', e => {
+    if (!tuneOk()) return;
+    scanStop('you tuned');
+    k.setPointerCapture(e.pointerId); k.focus();
+    tune.drag = { last: ang(e), rest: 0 };
+    e.preventDefault();
+  });
+  k.addEventListener('pointermove', e => {
+    const d = tune.drag; if (!d) return;
+    if (!tuneOk()){ tune.drag = null; return; }
+    let a = ang(e), da = a - d.last; d.last = a;
+    if (da > 180) da -= 360; else if (da < -180) da += 360;            // across the ±180° seam
+    tune.angle = (tune.angle + da) % 3600; drawKnob();                 // the knob follows the pointer exactly
+    d.rest += da * TUNE_PER_TURN / 360;                                // and every 7.2° is one step
+    const n = d.rest > 0 ? Math.floor(d.rest) : Math.ceil(d.rest);
+    if (n){ d.rest -= n; const st = stepHz(); setFreq(Math.round(tune.hz / st) * st + n * st, 0); }
+  });
+  const end = () => { if (tune.drag){ tune.drag = null; tune.touched = performance.now(); } };
+  k.addEventListener('pointerup', end); k.addEventListener('pointercancel', end);
+  k.addEventListener('wheel', e => { if (!tuneOk()) return; e.preventDefault(); tuneBy(e.deltaY < 0 ? 1 : -1); }, { passive: false });
+  k.addEventListener('keydown', e => {
+    const n = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 10, PageDown: -10 }[e.key];
+    if (n){ e.preventDefault(); tuneBy(n); }
+  });
+  $('tuneUp').onclick = () => tuneBy(1);
+  $('tuneDn').onclick = () => tuneBy(-1);
+  $('tuneStep').value = String(store.get('tuneStep', 5));
+  $('tuneStep').onchange = () => store.set('tuneStep', +$('tuneStep').value);
+  /* type a frequency: 14.236 or 14236 (kHz) or 14236000 (Hz) */
+  const f = $('freq'), fi = $('freqIn');
+  f.onclick = () => { if (!tuneOk()) return; f.style.display = 'none'; fi.style.display = 'block';
+                      fi.value = (tune.hz / 1e6).toFixed(6).replace(/0+$/, '').replace(/\.$/, ''); fi.focus(); fi.select(); };
+  const close = () => { fi.style.display = 'none'; f.style.display = ''; };
+  fi.onkeydown = e => {
+    e.stopPropagation();                                               // Space here is typing, not PTT
+    if (e.key === 'Escape'){ close(); return; }
+    if (e.key !== 'Enter') return;
+    const v = parseFloat(fi.value.replace(',', '.'));
+    if (isFinite(v) && v > 0){ scanStop('you tuned'); setFreq(v < 100 ? v * 1e6 : v < 100000 ? v * 1e3 : v, 0); }
+    close();
+  };
+  fi.onblur = close;
+})();
+
+/* ---------- band buttons -------------------------------------------------- */
+/* The usual FreeDV calling frequencies (FreeDV activity days; evoham.com's FreeDV list).
+   lo/hi are the band edges, only used to light the button for the band you are on. */
+const RADE_BANDS = [
+  { band: '160 m', hz: 1870000,  lo: 1810000,  hi: 2000000 },
+  { band: '80 m',  hz: 3625000,  lo: 3500000,  hi: 4000000 },
+  { band: '40 m',  hz: 7177000,  lo: 7000000,  hi: 7300000 },
+  { band: '20 m',  hz: 14236000, lo: 14000000, hi: 14350000 },
+  { band: '17 m',  hz: 18118000, lo: 18068000, hi: 18168000 },
+  { band: '15 m',  hz: 21313000, lo: 21000000, hi: 21450000 },
+  { band: '12 m',  hz: 24933000, lo: 24890000, hi: 24990000 },
+  { band: '10 m',  hz: 28330000, lo: 28000000, hi: 29700000 }
+];
+(() => {
+  for (const b of RADE_BANDS){
+    const btn = document.createElement('button');
+    btn.className = 'bandbtn'; btn.disabled = true;
+    btn.innerHTML = `${b.band}<small>${(b.hz / 1e6).toFixed(3)}</small>`;
+    btn.title = `Tune to ${(b.hz / 1e6).toFixed(3)} MHz ${b.hz < 10e6 ? 'LSB' : 'USB'}`;
+    btn.onclick = () => {
+      if (!tuneOk()) return;
+      scanStop('you changed band');
+      setFreq(b.hz, 0);
+      $('scanLo').value = ((b.hz - 10000) / 1e6).toFixed(3);
+      $('scanHi').value = ((b.hz + 10000) / 1e6).toFixed(3);
+      setTimeout(setUsb, 80);                          // sideband for the new band, then read it back
+      setTimeout(readLvl, 400);                        // the new band's RF gain
+    };
+    b.btn = btn; $('bandRow').appendChild(btn);
+  }
+})();
+function showBand(){
+  for (const b of RADE_BANDS){
+    b.btn.classList.toggle('cur', tune.hz !== null && tune.hz >= b.lo && tune.hz <= b.hi);
+    b.btn.disabled = !(writer && tune.hz !== null && !tx.on);
+  }
+}
+
+/* ---------- scan, and centring on a RADE lock ----------------------------- */
+/* The decoder only locks within about 40 Hz of the right dial setting, so the
+   scan cannot simply step and wait for it. Instead, at each stop it averages the
+   receive spectrum and looks for a block of signal about 1.4 kHz wide standing
+   above the noise. The block's half-height edges give its centre to within
+   15 Hz or so, the dial is moved to put that centre where RADE sits, and the scan
+   waits for you to decide. Once the decoder locks, its own offset reading tunes
+   the last few hertz. Measured on the page's own signal: the half-height edges
+   of RADE V1 centre on 1484 Hz of audio. */
+const SCAN_HOP = 1000, RADE_AUDIO_CENTRE = 1484;
+const scan = { on: false, paused: false, token: 0, resume: null, lockSince: 0, centredAt: 0 };
+function scanNote(t){ $('scanState').textContent = t; }
+function parseFreq(v){
+  const x = parseFloat(String(v).replace(',', '.'));
+  return isFinite(x) && x > 0 ? Math.round(x < 100 ? x * 1e6 : x < 100000 ? x * 1e3 : x) : null;
+}
+function scanButtons(){
+  $('scanBtn').disabled = !writer;
+  $('scanBtn').textContent = scan.on ? 'Stop scan' : 'Scan';
+  $('scanGo').disabled = !(scan.on && scan.paused);
+}
+/* boxes left empty: 10 kHz either side of the dial, to the nearest kHz */
+function scanFillRange(){
+  if (tune.hz === null) return;
+  const c = Math.round(tune.hz / 1000) * 1000;
+  if (!parseFreq($('scanLo').value)) $('scanLo').value = ((c - 10000) / 1e6).toFixed(3);
+  if (!parseFreq($('scanHi').value)) $('scanHi').value = ((c + 10000) / 1e6).toFixed(3);
+}
+function scanStop(why){
+  if (!scan.on) return;
+  scan.on = false; scan.paused = false; scan.token++;
+  if (scan.resume){ const r = scan.resume; scan.resume = null; r(); }
+  scanButtons();
+  scanNote('Scan stopped' + (why ? ': ' + why : '') + (tune.hz !== null ? ` at ${fmtFreq(tune.hz)} MHz.` : '.'));
+}
+/* average the receive spectrum for ms milliseconds; return the centre of a wide signal, or null */
+async function scanListen(ms, my){
+  const an = rxAnalyser, n = an.frequencyBinCount, bin = MODEM_RATE / an.fftSize;
+  const acc = new Float64Array(n), db = new Float32Array(n);
+  let k = 0, held = 0;
+  for (const t0 = performance.now(); performance.now() - t0 < ms; ){
+    await sleep(100);
+    if (!scan.on || scan.token !== my || !rxAnalyser) return null;
+    held = rx.sync && !rx.paused ? held + 1 : 0;      // a lock must hold 0.8 s: the decoder can flicker into lock on noise
+    if (held >= 8) return { hz: RADE_AUDIO_CENTRE + rx.foff, why: 'the decoder has locked on a RADE signal' };
+    an.getFloatFrequencyData(db);
+    for (let i = 0; i < n; i++) acc[i] += Math.pow(10, db[i] / 10);
+    k++;
+  }
+  if (!k) return null;
+  const L = Array.from(acc, v => 10 * Math.log10(v / k + 1e-20));
+  const i300 = Math.round(300 / bin), i2700 = Math.round(2700 / bin);
+  const floor = L.slice(i300, i2700 + 1).sort((a, b) => a - b)[Math.floor((i2700 - i300) * 0.2)];
+  const thr = +$('scanThr').value, half = Math.round(700 / bin);
+  let best = null;
+  for (let c = Math.round(1000 / bin); c <= Math.round(2000 / bin); c += 2){
+    let p = 0, above = 0;
+    for (let i = c - half; i <= c + half; i++){ p += Math.pow(10, L[i] / 10); if (L[i] > floor + 3) above++; }
+    const mean = 10 * Math.log10(p / (2 * half + 1));
+    if (mean - floor >= thr && above / (2 * half + 1) >= 0.85 && (!best || mean > best.mean)) best = { c, mean };
+  }
+  if (!best) return null;
+  // the centre from the block's half-height edges, on a lightly smoothed spectrum
+  const sm = i => (L[Math.max(0, i - 2)] + L[Math.max(0, i - 1)] + L[i] + L[Math.min(n - 1, i + 1)] + L[Math.min(n - 1, i + 2)]) / 5;
+  const lvl = floor + (best.mean - floor) / 2;
+  let lo = best.c, hi = best.c;
+  while (lo > 0 && sm(lo) > lvl) lo--;
+  while (hi < n - 1 && sm(hi) > lvl) hi++;
+  return { hz: (lo + hi) / 2 * bin, why: `a signal ${((hi - lo) * bin / 1000).toFixed(1)} kHz wide, ${(best.mean - floor).toFixed(0)} dB above the noise` };
+}
+async function scanRun(){
+  if (scan.on){ scanStop('stopped by you'); return; }
+  if (!tuneOk()){ scanNote('Connect CAT first, and wait for the frequency to appear.'); $('scanState').className = 'note err'; setTimeout(() => { $('scanState').className = 'note'; }, 8000); return; }
+  if (!rx.on || rx.paused || !rxAnalyser){
+    scanNote('The page is not receiving yet: click \u201cFind audio devices\u201d at the top, check From rig is the QMX and Receive is ticked, then press Scan again.');
+    $('scanState').className = 'note err'; setTimeout(() => { $('scanState').className = 'note'; }, 8000);
+    return;
+  }
+  scanFillRange();
+  let lo = parseFreq($('scanLo').value), hi = parseFreq($('scanHi').value);
+  if (lo && hi && lo > hi){ [lo, hi] = [hi, lo]; $('scanLo').value = (lo / 1e6).toFixed(3); $('scanHi').value = (hi / 1e6).toFixed(3); }
+  if (!lo || !hi || hi - lo < SCAN_HOP){
+    scanNote('The scan range must be at least 1 kHz wide: for example 14.230 to 14.250 MHz.');
+    $('scanState').className = 'note err'; setTimeout(() => { $('scanState').className = 'note'; }, 8000); return;
+  }
+  store.set('scanLo', $('scanLo').value); store.set('scanHi', $('scanHi').value);
+  const my = ++scan.token; scan.on = true; scan.paused = false; scanButtons();
+  let f = tune.hz >= lo && tune.hz <= hi ? tune.hz : lo;
+  while (scan.on && scan.token === my){
+    if (!tuneOk()){ scanStop(tx.on ? 'transmitting' : 'CAT disconnected'); return; }
+    setFreq(f, 0);
+    scanNote(`Scanning ${fmtFreq(f)} MHz …`);
+    await sleep(350);                                 // the rig settles, and audio from the old frequency drains
+    if (!scan.on || scan.token !== my) return;
+    decoderReset();
+    const hit = await scanListen(+$('scanDwell').value, my);
+    if (!scan.on || scan.token !== my) return;
+    if (hit){
+      const to = Math.round(f + sbSign() * (hit.hz - RADE_AUDIO_CENTRE));
+      setFreq(to, 0);
+      scan.paused = true; scanButtons();
+      scanNote(`Stopped at ${fmtFreq(to)} MHz on ${hit.why}. Listen and watch the waterfall: `
+        + `Continue scan to move on, or Stop scan to stay here.`);
+      await new Promise(r => { scan.resume = r; });
+      if (!scan.on || scan.token !== my) return;
+      scan.paused = false; scanButtons();
+      f = to + SCAN_HOP;
+    } else f += SCAN_HOP;
+    if (f > hi) f = lo;                                // round again
+  }
+}
+/* centre on a RADE lock: once the decoder has held lock for 1.5 s, move the dial
+   by its offset reading, at most every 3 s; positive offset = signal above the dial */
+function autoCentre(){
+  const now = performance.now();
+  if (!(rx.on && !rx.paused && rx.sync)){ scan.lockSince = 0; return; }
+  if (!scan.lockSince) scan.lockSince = now;
+  if (!$('autoCentre').checked || !tuneOk() || tune.drag || (scan.on && !scan.paused)) return;
+  if (now - scan.lockSince < 1500 || now - scan.centredAt < 3000 || Math.abs(rx.foff) < 3) return;
+  scan.centredAt = now;
+  setFreq(tune.hz + sbSign() * Math.round(rx.foff), 0);
+}
+$('scanBtn').onclick = scanRun;
+$('scanGo').onclick = () => { if (scan.resume){ const r = scan.resume; scan.resume = null; r(); } };
+$('scanLo').value = store.get('scanLo', ''); $('scanHi').value = store.get('scanHi', '');
+$('autoCentre').checked = store.get('autoCentre', true);
+$('autoCentre').onchange = () => store.set('autoCentre', $('autoCentre').checked);
 
 /* ---------- an over ------------------------------------------------------ */
 async function startOver(){
@@ -948,6 +1419,9 @@ function tick(){
 }
 function setState(s, why){
   const st = $('state'), b = $('txBtn');
+  if (writer && tune.hz !== null) tuneEnable(s === 'rx');
+  showLvl();
+  if (s !== 'rx') scanStop('transmitting');
   st.className = s;
   st.textContent = s === 'tx' ? 'Transmitting' : s === 'end' ? 'Ending over…' : 'Receive' + (why ? ' — ' + why : '');
   b.classList.toggle('on', s !== 'rx');
@@ -1041,7 +1515,8 @@ const speechInt = s => { let v = Math.fround(s * 32768); v = v > 32767 ? 32767 :
 const stamp = d => d.toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '_');
 
 /* ---------- devices ------------------------------------------------------ */
-async function findDevices(){
+function findDevices(){ return rxSerial(findDevicesNow); }
+async function findDevicesNow(){
   try {
     const s = await navigator.mediaDevices.getUserMedia({ audio: true });   // labels need permission
     s.getTracks().forEach(t => t.stop());
@@ -1079,24 +1554,44 @@ function fill(sel, list, want, prefer){
     if (want && d.label === want){ o.selected = true; chosen = true; }
     sel.appendChild(o);
   }
-  if (!chosen && prefer) for (const o of sel.options) if (prefer.test(o.textContent) && !/^default/i.test(o.value)){ o.selected = true; break; }
+  // a device actually named QMX or QDX first; only then the looser radio-like names (USB PnP, CODEC, …)
+  if (!chosen && prefer){
+    const opts = [...sel.options].filter(o => !/^default/i.test(o.value));
+    const pick = opts.find(o => /QMX|QDX/i.test(o.textContent)) || opts.find(o => prefer.test(o.textContent));
+    if (pick) pick.selected = true;
+  }
   sel.disabled = false;
 }
 function checkDevices(){
   const lbl = id => $(id).selectedOptions[0] ? $(id).selectedOptions[0].textContent : '';
   const same = lbl('outSel') && lbl('outSel') === lbl('spkSel');
   const mic = lbl('micSel') && lbl('micSel') === lbl('rigInSel');
-  $('devWarn').textContent = same ? ' To rig and Speakers are the same device: decoded speech would go to the rig.'
-    : mic ? ' Microphone and From rig are the same device.' : '';
+  // a QMX is plugged in but another device is chosen as From rig: the waterfall and scan would not hear the radio
+  const qmx = [...$('rigInSel').options].find(o => /QMX|QDX/i.test(o.textContent));
+  const wrongRig = qmx && !/QMX|QDX/i.test(lbl('rigInSel'));
+  $('devWarn').textContent = [
+    wrongRig ? ` From rig is \u201c${lbl('rigInSel')}\u201d, but \u201c${qmx.textContent}\u201d is connected: choose it, or the waterfall and scan will not hear the radio.` : '',
+    same ? ' To rig and Speakers are the same device: decoded speech would go to the rig.' : '',
+    mic ? ' Microphone and From rig are the same device.' : ''].join('');
 }
 
 /* ---------- wiring ----------------------------------------------------- */
 $('allow').onclick = findDevices;
+function showThemeBtn(){
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  $('themeBtn').textContent = light ? '\u263E Dark mode' : '\u2600 Light mode';
+  $('themeBtn').title = light ? 'Switch to the dark theme' : 'Switch to the light theme';
+}
+$('themeBtn').onclick = () => {
+  const t = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t); store.set('theme', t); showThemeBtn();
+};
+showThemeBtn();
 $('micSel').onchange = async () => { store.set('mic', $('micSel').selectedOptions[0].textContent); checkDevices(); await reopenCapture(); };
 $('outSel').onchange = async () => { store.set('out', $('outSel').selectedOptions[0].textContent); checkDevices(); await applySink(); };
-$('rigInSel').onchange = async () => { store.set('rigIn', $('rigInSel').selectedOptions[0].textContent); checkDevices(); if (!tx.on) await restartReceive(); };
-$('spkSel').onchange = async () => { store.set('spk', $('spkSel').selectedOptions[0].textContent); checkDevices(); await setSink(spkCtx, $('spkSel').value); };
-$('rxOn').onchange = async () => { store.set('rxOn', $('rxOn').checked); if ($('rxOn').checked){ if (!tx.on) await startReceive(); } else await stopReceive(); };
+$('rigInSel').onchange = async () => { store.set('rigIn', $('rigInSel').selectedOptions[0].textContent); checkDevices(); if (!tx.on) await rxSerial(restartReceive); };
+$('spkSel').onchange = async () => { store.set('spk', $('spkSel').selectedOptions[0].textContent); checkDevices(); await setSink(spkCtx, $('spkSel').value); await setSink(rxCtx, $('spkSel').value); };
+$('rxOn').onchange = async () => { store.set('rxOn', $('rxOn').checked); if ($('rxOn').checked){ if (!tx.on) await rxSerial(startReceive); } else await rxSerial(stopReceive); };
 $('voiceProc').onchange = async () => { if (capCtx) await reopenCapture(); };
 $('drive').oninput = () => { $('driveVal').textContent = (+$('drive').value).toString().replace('-', '−') + ' dB'; store.set('drive', +$('drive').value); };
 $('vol').oninput = () => {
@@ -1105,6 +1600,20 @@ $('vol').oninput = () => {
   if (spkNode) spkNode.port.postMessage({ cmd: 'gain', g: Math.pow(10, +$('vol').value / 20) });
 };
 $('bpf').onchange = () => store.set('bpf', $('bpf').checked);
+$('forceUsb').checked = store.get('forceUsb', true);
+for (const w of ['rg', 'ag']){
+  const sl = $(w + 'Sl');
+  sl.addEventListener('pointerdown', () => { lvl.drag[w] = true; });
+  const up = () => { if (lvl.drag[w]){ lvl.drag[w] = false; sendLvl(w, +sl.value); } };
+  sl.addEventListener('pointerup', up); sl.addEventListener('pointercancel', up); sl.addEventListener('change', up);
+  sl.addEventListener('input', () => sendLvl(w, +sl.value));
+}
+$('monOn').checked = store.get('monOn', true);
+$('monOn').onchange = () => { store.set('monOn', $('monOn').checked); monitorTick(); };
+$('monGain').value = store.get('monGain', 0);
+$('monGain').oninput = () => { const v = +$('monGain').value; $('monVal').textContent = (v > 0 ? '+' : '') + String(v).replace('-', '\u2212') + ' dB'; store.set('monGain', v); monitorTick(); };
+$('monGain').oninput();
+$('forceUsb').onchange = () => { store.set('forceUsb', $('forceUsb').checked); setUsb(); };
 $('catBtn').onclick = catConnect;
 $('txBtn').onclick = () => tx.on ? endOver() : startOver();
 $('fileIn').onchange = loadFile;
@@ -1136,7 +1645,12 @@ window.addEventListener('unhandledrejection', () => { if (tx.on) emergencyStop()
 
 rxTick();
 loadEngine();
-loadDecoder();
+loadDecoder().then(async () => {
+  try {
+    const p = navigator.permissions && await navigator.permissions.query({ name: 'microphone' });
+    if (p && p.state === 'granted' && !rx.on) await findDevices();
+  } catch {}
+});
 </script>
 </body>
 </html>

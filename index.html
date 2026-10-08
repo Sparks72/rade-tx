@@ -1556,7 +1556,9 @@ function fill(sel, list, want, prefer){
   }
   // a device actually named QMX or QDX first; only then the looser radio-like names (USB PnP, CODEC, …)
   if (!chosen && prefer){
-    const opts = [...sel.options].filter(o => !/^default/i.test(o.value));
+    // skip Windows' "Default - …" and "Communications - …" (German: "Kommunikation - …") shortcuts: they follow
+    // whatever Windows has chosen, so a change in Windows would silently move the rig to another device
+    const opts = [...sel.options].filter(o => !/^(default|communications)$/i.test(o.value));
     const pick = opts.find(o => /QMX|QDX/i.test(o.textContent)) || opts.find(o => prefer.test(o.textContent));
     if (pick) pick.selected = true;
   }
@@ -1567,7 +1569,8 @@ function checkDevices(){
   const same = lbl('outSel') && lbl('outSel') === lbl('spkSel');
   const mic = lbl('micSel') && lbl('micSel') === lbl('rigInSel');
   // a QMX is plugged in but another device is chosen as From rig: the waterfall and scan would not hear the radio
-  const qmx = [...$('rigInSel').options].find(o => /QMX|QDX/i.test(o.textContent));
+  const qmxAll = [...$('rigInSel').options].filter(o => /QMX|QDX/i.test(o.textContent));
+  const qmx = qmxAll.find(o => !/^(default|communications)$/i.test(o.value)) || qmxAll[0];
   const wrongRig = qmx && !/QMX|QDX/i.test(lbl('rigInSel'));
   $('devWarn').textContent = [
     wrongRig ? ` From rig is \u201c${lbl('rigInSel')}\u201d, but \u201c${qmx.textContent}\u201d is connected: choose it, or the waterfall and scan will not hear the radio.` : '',

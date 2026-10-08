@@ -101,6 +101,10 @@
   .bandbtn{font-size:13px;padding:6px 10px;line-height:1.2;text-align:center}
   .bandbtn small{display:block;font-size:11px;color:var(--dim)}
   .bandbtn.cur{border-color:var(--key);box-shadow:inset 0 0 0 1px var(--key)}
+  .bandpick{font-size:13px;color:var(--dim)}
+  .bandpick summary{cursor:pointer;padding:6px 4px}
+  .bandpick[open]{flex-basis:100%}
+  .bandpick label{display:inline-flex;margin:4px 14px 4px 0}
   hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 
   /* ---- theme switch, and the light theme (dark stays the default above) ---- */
@@ -187,7 +191,7 @@
           <option value="300">5 minutes</option><option value="600">10 minutes</option>
         </select></label>
       <label><input type="checkbox" id="usePtt" checked> Key the rig over CAT</label>
-      <label title="FreeDV's standard: LSB below 10 MHz, USB from 10 MHz up"><input type="checkbox" id="forceUsb" checked> Set the sideband (LSB below 10 MHz, USB above)</label>
+      <label title="FreeDV's standard: LSB below 10 MHz, USB from 10 MHz up"><input type="checkbox" id="forceUsb" checked> Set the sideband (LSB below 10 MHz, USB on 60 m and above)</label>
       <span id="catState" class="dim">Not connected — use VOX, or connect CAT</span>
     </div>
     <p class="note">115200 baud. The rig is sent to receive whenever an over ends, when the safety limit is reached,
@@ -235,7 +239,8 @@
       <h3>Band</h3>
     </div>
     <p class="note" style="margin-top:6px">Each button tunes to the usual FreeDV frequency on that band, sets the sideband
-      (LSB below 10 MHz, USB above) and sets the scan range 10 kHz either side. Your QMX only tunes the bands it is built for.</p>
+      (LSB below 10 MHz, USB on 60 m and above) and sets the scan range, up to 10 kHz either side within the band.
+      60 m uses 5.363 MHz, the highest USB voice setting in the IARU Region 1 plan. <b>Choose bands</b> hides the ones your QMX does not have.</p>
     <hr>
     <div class="row">
       <h3>Scan</h3>
@@ -724,7 +729,7 @@ async function startReceive(){
     await ensureSpeaker();
     if (rxCtx.state !== 'running') await rxCtx.resume();
     if (spkCtx.state !== 'running') await spkCtx.resume();
-    rx.on = true;
+    rx.on = true; rx.startT = performance.now(); rx.heardT = 0;
     decoderReset();
     rx.paused = tx.on;
     startDrawing();
@@ -772,6 +777,7 @@ function onRigAudio(blk){
   let pk = 0;
   for (let k = 0; k < blk.length; k++){ const a = Math.abs(blk[k]); if (a > pk) pk = a; }
   meter('rxMeter', 'rxDb', pk);
+  if (pk > 0) rx.heardT = performance.now();       // anything at all; exact zeros mean the input is blocked, not quiet
   if (!rx.on || rx.paused) return;
   if (rx.tap) rx.tap.in.push(blk);
   recAudio(blk);
@@ -821,7 +827,23 @@ function finishRec(){
   $('rxLastInfo').textContent = `${(c.slen / SPEECH_RATE).toFixed(1)} s of speech at ${c.t0.toLocaleTimeString()}`;
 }
 
+/* Exact digital silence from From rig for 3 s: not a quiet band (that still shows noise) but audio that never
+   reaches the browser. Say so, with the usual Windows causes, instead of leaving a black waterfall. */
+let silenceShown = false;
+function silenceTick(){
+  const on = rx.on && !rx.paused && !tx.on && rxCtx && (performance.now() - (rx.heardT || rx.startT || 0)) > 3000;
+  if (on && !silenceShown){
+    silenceShown = true;
+    $('decoder').className = 'err';
+    $('decoder').textContent = 'No audio at all is reaching the page from \u201cFrom rig\u201d (exact silence, not even noise). '
+      + 'Close other programs using the QMX (WSJT-X, other QMX pages), check Windows Settings \u203a Privacy \u203a Microphone '
+      + 'lets desktop apps use it, and that this site may use the microphone (padlock by the address). Then click Find audio devices.';
+  } else if (!on && silenceShown && rx.heardT && performance.now() - rx.heardT < 1000){
+    silenceShown = false; $('decoder').className = 'ok'; $('decoder').textContent = 'Audio from the rig is arriving.';
+  }
+}
 function monitorTick(){
+  silenceTick();
   if (!rx.mon) return;
   const want = $('monOn').checked && rx.on && !rx.paused && !tx.on && !rx.sync ? Math.pow(10, +$('monGain').value / 20) : 0;
   rx.mon.gain.setTargetAtTime(want, rx.mon.context.currentTime, 0.05);            // a short fade, no clicks
@@ -1032,11 +1054,12 @@ const wantPtt = () => $('usePtt').checked && writer;
 /* RADE is many carriers at once: it must go out on SSB, never the QMX's single-tone
    DIGI mode, and on FreeDV's standard sideband: LSB below 10 MHz, USB from 10 MHz up
    (the FreeDV user manual, "USB or LSB?"). MD1 = LSB, MD2 = USB. */
-const wantMode = () => (tune.hz !== null && tune.hz < 10e6) ? 1 : 2;
+const modeFor = hz => (hz < 10e6 && !(hz >= 5250000 && hz <= 5450000)) ? 1 : 2;      // 60 m: USB, as for all voice there
+const wantMode = () => tune.hz !== null ? modeFor(tune.hz) : 2;
 async function setUsb(){ if (!writer) return; if ($('forceUsb').checked) await cat('MD' + wantMode() + ';'); await sleep(60); await cat('MD;'); }
 async function keyRig(){ if (wantPtt()){ if ($('forceUsb').checked) await cat('MD' + wantMode() + ';'); await cat($('keyCmd').value); await sleep(PTT_LEAD_MS); } }
 /* on LSB the audio runs the other way: a signal higher in the audio is lower on the dial */
-const sbSign = () => ((rigMode === 1 || rigMode === 9) || (rigMode === null && tune.hz !== null && tune.hz < 10e6)) ? -1 : 1;
+const sbSign = () => ((rigMode === 1 || rigMode === 9) || (rigMode === null && tune.hz !== null && modeFor(tune.hz) === 1)) ? -1 : 1;
 async function unkeyRig(){ if (writer){ try { await cat($('unkeyCmd').value); } catch {} } }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -1077,7 +1100,7 @@ function catReply(r){
     const name = MODE_NAMES[rigMode] || 'mode ' + rigMode;
     const want = wantMode(), wname = MODE_NAMES[want];
     if (rigMode === want) catNote(`Connected at 115200 baud \u00b7 rig in ${name}`, 'ok');
-    else catNote(`Connected \u00b7 rig in ${name}, but RADE here needs ${wname} (FreeDV: LSB below 10 MHz, USB above).`
+    else catNote(`Connected \u00b7 rig in ${name}, but RADE here needs ${wname} (FreeDV: LSB below 10 MHz except 60 m, USB above).`
       + ($('forceUsb').checked ? ' The rig did not accept the change; check its SSB firmware.' : ' Tick \u201cSet the sideband\u201d.'), 'err');
     return;
   }
@@ -1128,7 +1151,7 @@ function setFreq(hz, turnDeg){
   hz = Math.max(TUNE_MIN, Math.min(TUNE_MAX, Math.round(hz)));
   tune.angle = (tune.angle + (turnDeg || 0)) % 3600; drawKnob();
   if (hz === tune.hz) return;
-  const crossed = tune.hz !== null && (tune.hz < 10e6) !== (hz < 10e6);
+  const crossed = tune.hz !== null && modeFor(tune.hz) !== modeFor(hz);
   tune.hz = hz; tune.touched = performance.now(); showFreq(); showBand();
   if (crossed) setTimeout(setUsb, 80);
   if (!tune.sendT) tune.sendT = setTimeout(sendFreq, 40);            // at most 25 commands a second
@@ -1192,6 +1215,8 @@ function sendFreq(){
 const RADE_BANDS = [
   { band: '160 m', hz: 1870000,  lo: 1810000,  hi: 2000000 },
   { band: '80 m',  hz: 3625000,  lo: 3500000,  hi: 4000000 },
+  { band: '60 m',  hz: 5363000,  lo: 5351500,  hi: 5366500,
+    note: 'IARU Region 1: the highest USB voice dial in the WRC-15 band (5351.5\u20135366.5 kHz). FreeDV\u2019s 5.3665 would put RADE outside it. Check your licence.' },
   { band: '40 m',  hz: 7177000,  lo: 7000000,  hi: 7300000 },
   { band: '20 m',  hz: 14236000, lo: 14000000, hi: 14350000 },
   { band: '17 m',  hz: 18118000, lo: 18068000, hi: 18168000 },
@@ -1204,18 +1229,31 @@ const RADE_BANDS = [
     const btn = document.createElement('button');
     btn.className = 'bandbtn'; btn.disabled = true;
     btn.innerHTML = `${b.band}<small>${(b.hz / 1e6).toFixed(3)}</small>`;
-    btn.title = `Tune to ${(b.hz / 1e6).toFixed(3)} MHz ${b.hz < 10e6 ? 'LSB' : 'USB'}`;
+    btn.title = `Tune to ${(b.hz / 1e6).toFixed(3)} MHz ${modeFor(b.hz) === 1 ? 'LSB' : 'USB'}` + (b.note ? '. ' + b.note : '');
+    btn.innerHTML = `${b.band}<small>${(b.hz / 1e6).toFixed(3)}</small>`;
     btn.onclick = () => {
       if (!tuneOk()) return;
       scanStop('you changed band');
       setFreq(b.hz, 0);
-      $('scanLo').value = ((b.hz - 10000) / 1e6).toFixed(3);
-      $('scanHi').value = ((b.hz + 10000) / 1e6).toFixed(3);
+      const mhz = hz => (hz / 1e6).toFixed(hz % 1000 ? 4 : 3);     // 5.3665, not a rounded 5.367 outside the band
+      $('scanLo').value = mhz(Math.max(b.lo, b.hz - 10000));
+      $('scanHi').value = mhz(Math.min(b.hi, b.hz + 10000));
       setTimeout(setUsb, 80);                          // sideband for the new band, then read it back
       setTimeout(readLvl, 400);                        // the new band's RF gain
     };
     b.btn = btn; $('bandRow').appendChild(btn);
   }
+  const hidden = new Set(store.get('hiddenBands', []));
+  const pick = document.createElement('details'); pick.className = 'bandpick';
+  pick.innerHTML = '<summary>Choose bands</summary>';
+  for (const b of RADE_BANDS){
+    const l = document.createElement('label'), c = document.createElement('input');
+    c.type = 'checkbox'; c.checked = !hidden.has(b.band);
+    c.onchange = () => { c.checked ? hidden.delete(b.band) : hidden.add(b.band); store.set('hiddenBands', [...hidden]); b.btn.style.display = c.checked ? '' : 'none'; };
+    b.btn.style.display = c.checked ? '' : 'none';
+    l.append(c, ' ' + b.band); pick.appendChild(l);
+  }
+  $('bandRow').appendChild(pick);
 })();
 function showBand(){
   for (const b of RADE_BANDS){
